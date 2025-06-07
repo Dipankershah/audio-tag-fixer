@@ -31,18 +31,6 @@ except ImportError:
     input("Press Enter to exit...")
     sys.exit(1)
 
-def create_backup_dir(audio_dir):
-    """Create backup directory if it doesn't exist"""
-    backup_dir = audio_dir / "backup"
-    backup_dir.mkdir(exist_ok=True)
-    return backup_dir
-
-def backup_file(file_path, backup_dir):
-    """Create backup of the original file"""
-    backup_path = backup_dir / f"{file_path.name}.backup"
-    shutil.copy2(file_path, backup_path)
-    return backup_path
-
 def fix_tag_value(value):
     """Replace problematic separators with proper comma-space separators"""
     if isinstance(value, list):
@@ -80,7 +68,7 @@ def has_formatting_issues(text):
     return ('\x00' in text or '\\\\' in text or 
             bool(re.search(r'[a-zA-Z0-9]\\\s*[a-zA-Z]', text)))
 
-def process_file(file_path, backup_dir):
+def process_file(file_path):
     """Process a single audio file"""
     print(f"Processing: {file_path.name}")
     
@@ -110,7 +98,6 @@ def process_file(file_path, backup_dir):
                 current_artist = str(artist_tag.text[0])
             
             if title_tag and has_formatting_issues(str(title_tag)):
-                backup_file(file_path, backup_dir)
                 old_title = str(title_tag)
                 new_title = fix_single_value(old_title)
                 audio_file['TIT2'] = TIT2(encoding=3, text=[new_title])
@@ -119,8 +106,6 @@ def process_file(file_path, backup_dir):
                 current_title = new_title
             
             if artist_tag and has_formatting_issues(str(artist_tag)):
-                if not modified:  # Only backup once
-                    backup_file(file_path, backup_dir)
                 old_artist = str(artist_tag)
                 new_artist = fix_single_value(old_artist)
                 audio_file['TPE1'] = TPE1(encoding=3, text=[new_artist])
@@ -139,7 +124,6 @@ def process_file(file_path, backup_dir):
                 current_artist = str(artist_tag[0])
             
             if title_tag and has_formatting_issues(str(title_tag[0])):
-                backup_file(file_path, backup_dir)
                 old_title = str(title_tag[0])
                 new_title = fix_single_value(old_title)
                 audio_file['©nam'] = [new_title]
@@ -148,8 +132,6 @@ def process_file(file_path, backup_dir):
                 current_title = new_title
             
             if artist_tag and has_formatting_issues(str(artist_tag[0])):
-                if not modified:
-                    backup_file(file_path, backup_dir)
                 old_artist = str(artist_tag[0])
                 new_artist = fix_single_value(old_artist)
                 audio_file['©ART'] = [new_artist]
@@ -171,7 +153,6 @@ def process_file(file_path, backup_dir):
             artist_text = str(artist_tag[0] if isinstance(artist_tag, list) else artist_tag) if artist_tag else ""
             
             if title_tag and has_formatting_issues(title_text):
-                backup_file(file_path, backup_dir)
                 old_title = title_text
                 new_title = fix_single_value(old_title)
                 audio_file['TITLE'] = [new_title]
@@ -180,8 +161,6 @@ def process_file(file_path, backup_dir):
                 current_title = new_title
             
             if artist_tag and has_formatting_issues(artist_text):
-                if not modified:
-                    backup_file(file_path, backup_dir)
                 old_artist = artist_text
                 new_artist = fix_single_value(old_artist)
                 audio_file['ARTIST'] = [new_artist]
@@ -226,9 +205,6 @@ def main():
     print(f"Processing audio files in: {script_dir}")
     print()
     
-    # Create backup directory
-    backup_dir = create_backup_dir(script_dir)
-    
     # Supported audio extensions
     audio_extensions = {'.mp3', '.flac', '.m4a', '.wav', '.ogg', '.wma', '.aac'}
     
@@ -252,7 +228,7 @@ def main():
     
     for audio_file in sorted(audio_files):
         processed += 1
-        if process_file(audio_file, backup_dir):
+        if process_file(audio_file):
             modified += 1
         print()
     
@@ -261,7 +237,6 @@ def main():
     print("Processing complete!")
     print(f"Files processed: {processed}")
     print(f"Files modified: {modified}")
-    print(f"Backups saved in: {backup_dir}")
     print("=" * 50)
     
     input("Press Enter to exit...")
